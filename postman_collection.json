@@ -1,0 +1,154 @@
+{
+	"info": {
+		"_postman_id": "1080e66b-33c2-4a68-9ea9-b3573ff95e2c",
+		"name": "askfm",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get token",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const secret = 'PbLgkoXqbmCJnxZyRerSywVkoGkdp';",
+							"",
+							"// reimplement the Signature class to js",
+							"",
+							"// return the signature string",
+							"",
+							"const getEndPoint = (endpoint) => {",
+							"    return endpoint",
+							"}",
+							"",
+							"const getHostWithPort = () => {",
+							"    const host = \"api.ask.fm\"",
+							"    const port = 443",
+							"    return `${host}:${port}`",
+							"}",
+							"",
+							"const getRequestMethodString = (key) => {",
+							"    // map which contains all the requests with their corresponding ints",
+							"    // the number indicates GET: 0, ",
+							"    function methodAsString(i) {",
+							"        const methodMap = new Map([",
+							"            [0, 'GET'],",
+							"            [1, 'POST'],",
+							"            [2, 'PUT'],",
+							"            [3, 'DELETE'],",
+							"        ]);",
+							"",
+							"        const methodName = methodMap.get(i);",
+							"",
+							"        if (methodName === undefined) {",
+							"            throw new Error('Invalid request method code');",
+							"        }",
+							"",
+							"        return methodName;",
+							"    }",
+							"    // add all to the store.",
+							"    const store = {",
+							"        \"token\": 0,",
+							"    }",
+							"    return methodAsString(store[key])",
+							"}",
+							"",
+							"const getServerUrl = () => {",
+							"    return \"https://\" + getHostWithPort()",
+							"}",
+							"",
+							"const generateParamsByMethod = () => {",
+							"    // a post/put request",
+							"    if (getRequestMethodString() != 0 || getRequestMethodString() != 3) {",
+							"        // convert params to POST",
+							"        const hashMap = new Map();",
+							"        const jsonPayload = JSON.stringify(payload)",
+							"        hashMap.set(\"json\", jsonPayload);",
+							"    }",
+							"}",
+							"",
+							"",
+							"function getSignature() {",
+							"    // get requestMethodString",
+							"    const requestMethodString = getRequestMethodString(\"token\")",
+							"    const hostWithPort = getHostWithPort()",
+							"    const endPoint = getEndPoint(\"/token\")",
+							"    const hash = generateHash(requestMethodString, hostWithPort, endPoint, generateParamsByMethod())",
+							"    return hash",
+							"}",
+							"",
+							"var hash = CryptoJS.HmacSHA1(pm.request.body.toString(), secret);",
+							"var hashSend = CryptoJS.enc.Base64.stringify(hash);",
+							"",
+							"//set it to the environment variable",
+							"pm.environment.set(\"HMAC_auth\", hashSend);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Api-Version",
+						"value": "1.18",
+						"type": "default"
+					},
+					{
+						"key": "X-Client-Type",
+						"value": "android_4.91.1",
+						"type": "default"
+					},
+					{
+						"key": "Host",
+						"value": "api.ask.fm:443",
+						"type": "default"
+					},
+					{
+						"key": "User-Agent",
+						"value": "Dalvik/2.1.0 (Linux; U; Android 11; Phone Build/RQ1A.210105.003)",
+						"type": "default"
+					},
+					{
+						"key": "Authorization",
+						"value": "HMAC {{HMAC_auth}}",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "https://api.ask.fm/token?adid=b5d89833-7b09-4f29-8357-a5994ca09e76&did=6dc885091e5342ce&rt=1&ts={{$timestamp}}",
+					"protocol": "https",
+					"host": [
+						"api",
+						"ask",
+						"fm"
+					],
+					"path": [
+						"token"
+					],
+					"query": [
+						{
+							"key": "adid",
+							"value": "b5d89833-7b09-4f29-8357-a5994ca09e76"
+						},
+						{
+							"key": "did",
+							"value": "6dc885091e5342ce"
+						},
+						{
+							"key": "rt",
+							"value": "1"
+						},
+						{
+							"key": "ts",
+							"value": "{{$timestamp}}"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
