@@ -4,6 +4,7 @@ The aim of this project is to return the threads back to the askfm web version, 
 ## How am I going to do this ?
 The idea is pretty simple :
 - Intercept the network traffic and play with their API.
+    - Use `frida` to intercept the runtime, and log the key! (use the `log.js`) and don't forget to run the frida-server on the target mobile machine.
 - Create a web extension that calls that API and modify the HTML to display the answers in the thread.
 
 ## Process
@@ -58,6 +59,6 @@ There must be away to generate the HMAC key:
 ## ToDo
 - [X] Discover the API params for that API route.
 - [X] Test if the java code actually generates the the HMAC.
-- [ ] Test using a python script.
-- [ ] Translate the `java` code into `js`.
+- [X] Test using a js script.
+- [X] Translate the `java` code into `js`.
 - [ ] Create a web extension.
