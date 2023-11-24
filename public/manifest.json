@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Get Threads Back",
+    "version": "1.0.0",
+    "description": "Return the threads back to ask.fm by using the mobile api and manipulating the HTML.",
+    "permissions": ["activeTab"],
+    "action": {
+        "default_popup": "index.html",
+        "default_icon": {
+          "32": "icons/icon_32.png"
+        }
+    },
+    "host_permissions": [
+        "https://ask.fm/*"
+    ]
+}
