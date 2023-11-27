@@ -40,13 +40,13 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
       }
     };
     const resp = await axios.request(config);
-    const data = JSON.parse(resp.data);
+    const data = resp.data;
     const messages: Message[] = data?.messages || [];
 
     const threadDetails: ThreadDetails = {
         messages: messages.map((message: any) => ({
           fullName: message.fullName,
-          accountId: message.accountId,
+          accountId: message.uid,
           avatarUrl: message.avatarUrl,
           createdAt: message.createdAt,
           text: message.text,
@@ -54,8 +54,6 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
         })),
     };
 
-    console.log("hiiiiiiiiii")
-    console.log(threadDetails)
     return threadDetails
 }
 
