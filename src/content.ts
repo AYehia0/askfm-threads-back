@@ -1,10 +1,133 @@
-import {getThreadsDetails} from "./askfm/api.ts"
+import {getThreadsDetails, ThreadDetails} from "./askfm/api.ts"
 
 const extractQuestionIdFromHref = (href: string | null) => {
     if (!href) return null;
     const match = href.match(/\/answers\/(\d+)/);
     return match ? match[1] : null;
 };
+
+const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
+  // add the first message
+  chatDiv.innerHTML = `
+    <div class="chat-header" style="
+      padding: 10px;
+      background-color: #ee1144;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;">
+
+      <h2>Chat Messages</h2>
+    </div>
+    <div class="chat-messages" style="
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      border-radius: 10px;
+      margin-top: 10px;">
+
+      <div class="messages-container" style="display: flex; flex-direction: column;"></div>
+    </div>
+    <div class="chat-input" style="
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;">
+
+      <input v-model="newMessage" type="text" placeholder="Type your message..." style="
+        flex: 1;
+        padding: 8px;
+        margin-right: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;">
+
+      <button onclick="sendMessage" style="
+        padding: 8px;
+        background-color: #ee1144;
+        color: #fff;
+        border: none;
+        cursor: pointer;">Send</button>
+    </div>
+  `;
+
+  const messagesContainer = chatDiv.querySelector(".messages-container");
+
+  // add the first msg
+  if (messagesContainer) {
+    const isOwnClass = chat.messages[0].isOwn ? "own-message" : "other-message";
+    const avatarSrc = chat.messages[0].avatarUrl || "http://placekitten.com/250/250";
+
+    messagesContainer.innerHTML += `
+      <div class="message ${isOwnClass}" style="
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        background-color: ${chat.messages[0].isOwn ? '#e0f0e0' : '#f0f0f0'};
+        border-radius: 10px;
+        padding: 10px;">
+
+        <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          margin-right: 10px;">
+
+        <div class="message-text" style="flex: 1;">
+          ${chat.answer.body}
+        </div>
+      </div>
+    `;
+  }
+
+  chat.messages.slice(1).forEach((msg) => {
+    if (messagesContainer) {
+      const isOwnClass = msg.isOwn ? "own-message" : "other-message";
+      const avatarSrc = msg.avatarUrl || "http://placekitten.com/250/250";
+
+      messagesContainer.innerHTML += `
+        <div class="message ${isOwnClass}" style="
+          display: flex;
+          align-items: center;
+          margin-bottom: 10px;
+          background-color: ${msg.isOwn ? '#e0f0e0' : '#f0f0f0'};
+          border-radius: 10px;
+          padding: 10px;">
+
+          <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;">
+
+          <div class="message-text" style="flex: 1;">
+            ${msg.text}
+          </div>
+        </div>
+      `;
+    }
+  });
+};
+
+const showChat = (questionHTML: Element | null , chat: ThreadDetails) => {
+    
+    // change the +1 messages to Reload
+    if (questionHTML) {
+        const readAllMessages = questionHTML?.querySelector('[data-tracking-screen="Web2app_Chat_function"]')
+        if (readAllMessages) {
+            readAllMessages.textContent = "Reload"
+
+            readAllMessages.previousElementSibling?.remove()
+            
+            // append the new html
+            const chatDiv = document.createElement("div")
+
+            buildChatHtml(chatDiv, chat)
+
+            // append the first chat message
+            readAllMessages.previousElementSibling?.after(chatDiv)
+        }
+    }
+}
 
 const handleQuestionClick = async (event: Event) => {
     // get the question id from that element : under that class streamItem_meta
@@ -17,7 +140,7 @@ const handleQuestionClick = async (event: Event) => {
         console.log("Trying to get chats for : ", questionId)
 
         const chat = await getThreadsDetails(questionId!)
-        console.log(chat)
+        showChat(article, chat)
     }
 };
 
@@ -47,7 +170,6 @@ const handleNewContent = debounce(() => {
 }, 500); // Adjust the delay as needed
 
 const handleUrlChange = debounce(() => {
-    console.log(`URL changed to ${location.href}`);
     // Reattach content observer after URL change
     contentObserver.disconnect();
     contentObserver.observe(document.body, observerConfig);

@@ -11,8 +11,24 @@ type Message = {
     text: string,
     isOwn: boolean,
 }
-type ThreadDetails = {
-    messages: Message[],
+
+type Answer = {
+    type: string
+    body: string
+    createdAt: number
+}
+
+type RootAnswer = {
+    avatarThumbUrl?: string
+    author?: string
+    authorName?: string
+    createdAt: number
+}
+
+export type ThreadDetails = {
+    root: RootAnswer
+    answer: Answer
+    messages: Message[]
 }
 
 // GetThreads
@@ -44,6 +60,17 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
     const messages: Message[] = data?.messages || [];
 
     const threadDetails: ThreadDetails = {
+        root: {
+            author: data?.root?.author,
+            authorName: data?.root?.authorName,
+            avatarThumbUrl: data?.root?.avatarThumbUrl,
+            createdAt: data?.root?.createdAt,
+        },
+        answer: {
+            type: data?.root?.answer?.type,
+            body: data?.root?.answer?.body,
+            createdAt: data?.root?.answer?.createdAt,
+        },
         messages: messages.map((message: any) => ({
           fullName: message.fullName,
           accountId: message.uid,
