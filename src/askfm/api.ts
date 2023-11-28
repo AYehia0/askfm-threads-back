@@ -25,7 +25,13 @@ type RootAnswer = {
     createdAt: number
 }
 
+type Owner = {
+    owner: string
+    avatarUrl: string
+    fullName: string
+}
 export type ThreadDetails = {
+    owner: Owner,
     root: RootAnswer
     answer: Answer
     messages: Message[]
@@ -59,7 +65,13 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
     const data = resp.data;
     const messages: Message[] = data?.messages || [];
 
+    console.log(data)
     const threadDetails: ThreadDetails = {
+        owner: {
+            owner: data?.owner?.uid,
+            avatarUrl: data?.owner?.avatarUrl,
+            fullName: data?.owner?.fullName,
+        },
         root: {
             author: data?.root?.author,
             authorName: data?.root?.authorName,

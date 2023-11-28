@@ -1,7 +1,7 @@
 import {getThreadsDetails, ThreadDetails} from "./askfm/api.ts"
 
 
-const PLACEHOLDER_AVATAR = "http://placekitten.com/250/250"
+const PLACEHOLDER_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
 
 const extractQuestionIdFromHref = (href: string | null) => {
     if (!href) return null;
@@ -10,19 +10,15 @@ const extractQuestionIdFromHref = (href: string | null) => {
 };
 
 const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
+
+    const ownerBackground = '#ed828259'
+    const otherBackground = '#f0f0f0'
+
+    // Sort messages by createdAt
+    const sortedMessages = [...chat.messages].sort((a, b) => a.createdAt - b.createdAt);
+
   // add the first message
   chatDiv.innerHTML = `
-    <div class="chat-header" style="
-      padding: 10px;
-      background-color: #ee1144;
-      color: #fff;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;">
-
-      <h2>Chat Messages</h2>
-    </div>
     <div class="chat-messages" style="
       padding: 10px;
       max-height: 200px;
@@ -35,12 +31,12 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
     <div class="chat-input" style="
       padding: 10px;
       display: flex;
-      margin-top: 10px;
       justify-content: space-between;">
 
       <input v-model="newMessage" type="text" placeholder="Type your message..." style="
         flex: 1;
         padding: 8px;
+        margin-right: 10px;
         border: 1px solid #ddd;
         border-radius: 5px;">
 
@@ -57,57 +53,87 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
 
   // add the first msg
   if (messagesContainer) {
-    const isOwnClass = chat.messages[0].isOwn ? "own-message" : "other-message";
-    const avatarSrc = chat.messages[0].avatarUrl || PLACEHOLDER_AVATAR;
+    const isOwnClass =  "own-message";
+    const avatarSrc = chat.owner.avatarUrl
+    const authorName = chat.owner.fullName
 
     messagesContainer.innerHTML += `
       <div class="message ${isOwnClass}" style="
         display: flex;
-        align-items: center;
+        flex-direction: column;
         margin-bottom: 10px;
-        background-color: ${chat.messages[0].isOwn ? '#e0f0e0' : '#f0f0f0'};
+        background-color: ${ownerBackground};
         border-radius: 10px;
         padding: 10px;">
 
-        <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          margin-right: 10px;">
-
+        ${authorName !== "Anonymous" ? `
+          <a href="https://ask.fm/${chat.owner.owner}" style="display: flex; align-items: center;" target="_blank">
+            <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              margin-right: 10px;">
+            ${authorName}
+          </a>
+        ` : `
+          <div style="display: flex; align-items: center;">
+            <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              margin-right: 10px;">
+            ${authorName}
+          </div>
+        `}
+        
         <div class="message-text" style="flex: 1;">
           ${chat.answer.body}
-          <div class="small-date" style="font-size: 10px; color: #666; text-align: ${chat.messages[0].isOwn ? 'right' : 'left'};">
-            ${new Date(chat.messages[0].createdAt * 1000).toLocaleString()}
+          <div class="small-date" style="font-size: 10px; color: #666; text-align: right;">
+            ${new Date(chat.root.createdAt * 1000).toLocaleString()}
           </div>
         </div>
       </div>
     `;
   }
 
-  chat.messages.slice(1).forEach((msg) => {
+  sortedMessages.forEach((msg) => {
     if (messagesContainer) {
       const isOwnClass = msg.isOwn ? "own-message" : "other-message";
       const avatarSrc = msg.avatarUrl || PLACEHOLDER_AVATAR;
+      const authorName = msg.fullName || "Anonymous";
 
       messagesContainer.innerHTML += `
         <div class="message ${isOwnClass}" style="
           display: flex;
-          align-items: center;
+          flex-direction: column;
           margin-bottom: 10px;
-          background-color: ${msg.isOwn ? '#e0f0e0' : '#f0f0f0'};
+          background-color: ${msg.isOwn ? ownerBackground : otherBackground};
           border-radius: 10px;
           padding: 10px;">
 
-          <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            margin-right: 10px;">
-
+          ${authorName !== "Anonymous" ? `
+            <a href="https://ask.fm/${msg.accountId}" style="display: flex; align-items: center;" target="_blank">
+              <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                margin-right: 10px;">
+              ${authorName}
+            </a>
+          ` : `
+            <div style="display: flex; align-items: center;">
+              <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                margin-right: 10px;">
+              ${authorName}
+            </div>
+          `}
+          
           <div class="message-text" style="flex: 1;">
             ${msg.text}
-            <div class="small-date" style="font-size: 10px; color: #666; text-align: ${msg.isOwn ? 'right' : 'left'};">
+            <div class="small-date" style="font-size: 10px; color: #666; text-align: right;">
               ${new Date(msg.createdAt * 1000).toLocaleString()}
             </div>
           </div>
