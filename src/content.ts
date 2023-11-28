@@ -1,5 +1,8 @@
 import {getThreadsDetails, ThreadDetails} from "./askfm/api.ts"
 
+
+const PLACEHOLDER_AVATAR = "http://placekitten.com/250/250"
+
 const extractQuestionIdFromHref = (href: string | null) => {
     if (!href) return null;
     const match = href.match(/\/answers\/(\d+)/);
@@ -32,12 +35,12 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
     <div class="chat-input" style="
       padding: 10px;
       display: flex;
+      margin-top: 10px;
       justify-content: space-between;">
 
       <input v-model="newMessage" type="text" placeholder="Type your message..." style="
         flex: 1;
         padding: 8px;
-        margin-right: 10px;
         border: 1px solid #ddd;
         border-radius: 5px;">
 
@@ -55,7 +58,7 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
   // add the first msg
   if (messagesContainer) {
     const isOwnClass = chat.messages[0].isOwn ? "own-message" : "other-message";
-    const avatarSrc = chat.messages[0].avatarUrl || "http://placekitten.com/250/250";
+    const avatarSrc = chat.messages[0].avatarUrl || PLACEHOLDER_AVATAR;
 
     messagesContainer.innerHTML += `
       <div class="message ${isOwnClass}" style="
@@ -74,6 +77,9 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
 
         <div class="message-text" style="flex: 1;">
           ${chat.answer.body}
+          <div class="small-date" style="font-size: 10px; color: #666; text-align: ${chat.messages[0].isOwn ? 'right' : 'left'};">
+            ${new Date(chat.messages[0].createdAt * 1000).toLocaleString()}
+          </div>
         </div>
       </div>
     `;
@@ -82,7 +88,7 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
   chat.messages.slice(1).forEach((msg) => {
     if (messagesContainer) {
       const isOwnClass = msg.isOwn ? "own-message" : "other-message";
-      const avatarSrc = msg.avatarUrl || "http://placekitten.com/250/250";
+      const avatarSrc = msg.avatarUrl || PLACEHOLDER_AVATAR;
 
       messagesContainer.innerHTML += `
         <div class="message ${isOwnClass}" style="
@@ -101,6 +107,9 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
 
           <div class="message-text" style="flex: 1;">
             ${msg.text}
+            <div class="small-date" style="font-size: 10px; color: #666; text-align: ${msg.isOwn ? 'right' : 'left'};">
+              ${new Date(msg.createdAt * 1000).toLocaleString()}
+            </div>
           </div>
         </div>
       `;
