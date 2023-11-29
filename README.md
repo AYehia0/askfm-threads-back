@@ -28,5 +28,5 @@ First you have to grab these keys, [How to get the keys ?](https://ayehia0.githu
 - [X] Add author's name `autherName` to the messages in the thread.
 - [ ] Delete from thread.
 - [ ] Show images and youtube links.
-- [ ] Add to thread: threads with replies.
+- [X] Add to thread: threads with replies.
 - [ ] Add to any thread: threads without replies.
