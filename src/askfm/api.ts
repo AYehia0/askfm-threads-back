@@ -115,7 +115,7 @@ export const addToThread = async (questionId: string, text: string) => {
     hashMap.set("ts", time.toString())
     hashMap.set("rt", "1")
     hashMap.set("qid", questionId)
-    hashMap.set("anonymous", "false")
+    hashMap.set("anonymous", "true")
     hashMap.set("text", text)
 
     const jsonData: Record<string, string> = Object.fromEntries(
