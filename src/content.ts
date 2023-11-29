@@ -1,4 +1,4 @@
-import {getThreadsDetails, ThreadDetails} from "./askfm/api.ts"
+import {getThreadsDetails, addToThread, ThreadDetails} from "./askfm/api.ts"
 
 
 const PLACEHOLDER_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
@@ -17,9 +17,9 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
     // Sort messages by createdAt
     const sortedMessages = [...chat.messages].sort((a, b) => a.createdAt - b.createdAt);
 
-  // add the first message
-  chatDiv.innerHTML = `
-    <div class="chat-messages" style="
+    // add the first message
+    chatDiv.innerHTML = `
+    <div class="chat-messages" qid="${chat.threadId}" style="
       padding: 10px;
       max-height: 200px;
       overflow-y: auto;
@@ -33,14 +33,14 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
       display: flex;
       justify-content: space-between;">
 
-      <input v-model="newMessage" type="text" placeholder="Type your message..." style="
+      <input id="toSendText" type="text" placeholder="Type your message..." style="
         flex: 1;
         padding: 8px;
         margin-right: 10px;
         border: 1px solid #ddd;
         border-radius: 5px;">
 
-      <button onclick="sendMessage" style="
+      <button id="sendMessage" style="
         padding: 8px;
         background-color: #ee1144;
         color: #fff;
@@ -160,9 +160,45 @@ const showChat = (questionHTML: Element | null , chat: ThreadDetails) => {
 
             // append the first chat message
             readAllMessages.previousElementSibling?.after(chatDiv)
+
+            // add event listener to the send button
+            const sendMessageButton = chatDiv.querySelector('#sendMessage');
+            if (sendMessageButton) {
+                addSendMessageClickListener(sendMessageButton as HTMLElement, chatDiv)
+            }
         }
     }
 }
+
+// Event handler for send message button click
+const handleSendMessageClick = (_: MouseEvent, chatDiv: HTMLDivElement): void => {
+    // Get the associated input element from the chatDiv
+    const inputText = chatDiv?.querySelector('input');
+
+    if (inputText) {
+
+        // get the questionId
+        const chatMessagesDiv = chatDiv.querySelector('.chat-messages');
+        const questionId = chatMessagesDiv?.getAttribute('qid');
+
+        // add to thread
+        if (questionId)
+            addToThread(questionId, inputText.value)
+
+        // Clear the input text
+        inputText.value = '';
+    }
+
+};
+
+const addSendMessageClickListener = (sendMessageButton: HTMLElement, chatDiv: HTMLDivElement): void => {
+    if (sendMessageButton && !hasEventListener(sendMessageButton, 'click', handleSendMessageClick as EventListenerOrEventListenerObject)) {
+        sendMessageButton.addEventListener('click', event => {
+            handleSendMessageClick(event, chatDiv)
+        });
+    }
+};
+
 
 const handleQuestionClick = async (event: Event) => {
     // get the question id from that element : under that class streamItem_meta
@@ -171,9 +207,6 @@ const handleQuestionClick = async (event: Event) => {
         const questionLink = article.querySelector('.streamItem_meta');
         const href = questionLink!.getAttribute('href');
         const questionId = extractQuestionIdFromHref(href);
-
-        console.log("Trying to get chats for : ", questionId)
-
         const chat = await getThreadsDetails(questionId!)
         showChat(article, chat)
     }

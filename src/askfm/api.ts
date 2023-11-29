@@ -1,7 +1,6 @@
 import {AxiosRequestConfig} from "axios"
 import axios from "axios";
-import {generateSignature, getUnixTime} from "../askfm/generate_hash"
-
+import {generateSignature} from "../askfm/generate_hash"
 
 type Message = {
     fullName?: string,
@@ -31,24 +30,32 @@ type Owner = {
     fullName: string
 }
 export type ThreadDetails = {
-    owner: Owner,
+    threadId: string
+    owner: Owner
     root: RootAnswer
     answer: Answer
     messages: Message[]
 }
+
+
+const getUnixTime = (): number => {
+    return Math.floor(new Date().getTime() / 1000);
+};
 
 // GetThreads
 // API: GET answers/chats
 // Params: ?limit=25&qid= 174009108712 &rt=17&ts=1700937407
 export const getThreadsDetails = async (questionId: string): Promise<ThreadDetails>  => {
     const hashMap: Map<string, string | number> = new Map();
+    const time = getUnixTime() 
 
     hashMap.set("limit", 25)
     hashMap.set("qid", questionId)
+    hashMap.set("ts", time)
+    hashMap.set("rt", 1)
 
     const endpoint = "/answers/chats"
-    const time = getUnixTime() 
-    const signature = generateSignature(endpoint, "GET", hashMap, time)
+    const signature = generateSignature(endpoint, "GET", hashMap)
 
     let config:AxiosRequestConfig = {
       method: 'get',
@@ -67,6 +74,7 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
 
     console.log(data)
     const threadDetails: ThreadDetails = {
+        threadId: data?.root?.qid,
         owner: {
             owner: data?.owner?.uid,
             avatarUrl: data?.owner?.avatarUrl,
@@ -89,7 +97,7 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
           avatarUrl: message.avatarUrl,
           createdAt: message.createdAt,
           text: message.text,
-          isOwn: message.isOwn,
+          isOwn: message.isOwn, // TODO: fix this one it's always false as it ref to the owner of the question (the one who sent)
         })),
     };
 
@@ -99,3 +107,39 @@ export const getThreadsDetails = async (questionId: string): Promise<ThreadDetai
 // AddToThread
 // API: POST /chats/messages
 // Body: json=%7B%22anonymous%22%3A%22false%22%2C%22qid%22%3A%22174009108712%22%2C%22rt%22%3A%22253%22%2C%22text%22%3A%22dddd%22%2C%22ts%22%3A%221700945087%22%7D&
+export const addToThread = async (questionId: string, text: string) => {
+
+    const time = getUnixTime() 
+    const hashMap: Map<string, string> = new Map();
+
+    hashMap.set("ts", time.toString())
+    hashMap.set("rt", "1")
+    hashMap.set("qid", questionId)
+    hashMap.set("anonymous", "false")
+    hashMap.set("text", text)
+
+    const jsonData: Record<string, string> = Object.fromEntries(
+        [...hashMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    );
+    
+    const endpoint = "/chats/messages"
+    const signature = generateSignature(endpoint, "POST", hashMap)
+
+    let config:AxiosRequestConfig = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `https://api.ask.fm/chats/messages`,
+        headers: { 
+            'X-Api-Version': '1.18',
+            'X-Client-Type': 'android_4.91.1',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Access-Token': import.meta.env.VITE_X_ACCESS_TOKEN,
+            'Authorization': `HMAC ${signature}`
+        },
+        data: {"json": JSON.stringify(jsonData)}
+    };
+    const resp = await axios.request(config);
+    const data = resp.data;
+
+    console.log(data)
+}
