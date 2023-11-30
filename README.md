@@ -8,7 +8,7 @@ A chrome extension which brings threads back to the askfm web version.
 
 ## Getting started
 
-Disclaimer: This project is for educational purposes only.
+> :warning: **Disclaimer; This project is for educational purposes only**: Be very careful here!
 
 First you have to grab these keys, [How to get the keys ?](https://ayehia0.github.io/posts/askfm_reverse_engineering/):
 - `PRIVATE_KEY`
