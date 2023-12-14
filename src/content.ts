@@ -1,7 +1,7 @@
-import {getThreadsDetails, addToThread, ThreadDetails} from "./askfm/api.ts"
+import { getThreadsDetails, addToThread, ThreadDetails } from "./askfm/api.ts";
 
-
-const PLACEHOLDER_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+const PLACEHOLDER_AVATAR =
+    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 
 const extractQuestionIdFromHref = (href: string | null) => {
     if (!href) return null;
@@ -9,13 +9,28 @@ const extractQuestionIdFromHref = (href: string | null) => {
     return match ? match[1] : null;
 };
 
-const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
-
-    const ownerBackground = '#ed828259'
-    const otherBackground = '#f0f0f0'
+// check if the user who's adding to the thread is the owner (the thread is in their profile)
+const isUserOwner = (
+    answerOwner: string | undefined,
+    loggedInUser: string
+): boolean => {
+    return answerOwner === loggedInUser;
+};
+const buildChatHtml = (
+    chatDiv: HTMLDivElement,
+    chat: ThreadDetails,
+    answerOwner: string
+) => {
+    const ownerBackground = "#ed828259";
+    const otherBackground = "#f0f0f0";
 
     // Sort messages by createdAt
-    const sortedMessages = [...chat.messages].sort((a, b) => a.createdAt - b.createdAt);
+    const sortedMessages = [...chat.messages].sort(
+        (a, b) => a.createdAt - b.createdAt
+    );
+
+    const isOwner = isUserOwner(answerOwner, chat.loggedInUser);
+    console.log(chat);
 
     // add the first message
     chatDiv.innerHTML = `
@@ -40,6 +55,11 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
         border: 1px solid #ddd;
         border-radius: 5px;">
 
+      <label class="switch" style="margin-right: 10px; transform: scale(0.6);">
+        <input type="checkbox" id="anonToggle" ${isOwner ? "disabled" : ""}>
+        <span class="slider round" style="transform: scale(1.5);"></span>
+      </label>
+
       <button id="sendMessage" style="
         padding: 8px;
         background-color: #ee1144;
@@ -48,16 +68,69 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
         cursor: pointer;">Send</button>
     </div>
   `;
+    const style = document.createElement("style");
+    style.innerHTML = `
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
 
-  const messagesContainer = chatDiv.querySelector(".messages-container");
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
 
-  // add the first msg
-  if (messagesContainer) {
-    const isOwnClass =  "own-message";
-    const avatarSrc = chat.owner.avatarUrl
-    const authorName = chat.owner.fullName
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 34px;
+    transition: background-color 0.3s;
+  }
 
-    messagesContainer.innerHTML += `
+  .slider:before {
+    position: absolute;
+    content: '';
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+  }
+
+  input:checked + .slider {
+    background-color: #ee1144;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .slider.round {
+    border-radius: 34px;
+  }
+`;
+
+    document.head.appendChild(style);
+
+    const messagesContainer = chatDiv.querySelector(".messages-container");
+
+    // add the first msg
+    if (messagesContainer) {
+        const isOwnClass = "own-message";
+        const avatarSrc = chat.owner.avatarUrl;
+        const authorName = chat.owner.fullName;
+
+        messagesContainer.innerHTML += `
       <div class="message ${isOwnClass}" style="
         display: flex;
         flex-direction: column;
@@ -66,7 +139,9 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
         border-radius: 10px;
         padding: 10px;">
 
-        ${authorName !== "Anonymous" ? `
+        ${
+            authorName !== "Anonymous"
+                ? `
           <a href="https://ask.fm/${chat.owner.owner}" style="display: flex; align-items: center;" target="_blank">
             <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
               width: 30px;
@@ -75,7 +150,8 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
               margin-right: 10px;">
             ${authorName}
           </a>
-        ` : `
+        `
+                : `
           <div style="display: flex; align-items: center;">
             <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
               width: 30px;
@@ -84,7 +160,8 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
               margin-right: 10px;">
             ${authorName}
           </div>
-        `}
+        `
+        }
         
         <div class="message-text" style="flex: 1;">
           ${chat.answer.body}
@@ -94,24 +171,30 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
         </div>
       </div>
     `;
-  }
+    }
 
-  sortedMessages.forEach((msg) => {
-    if (messagesContainer) {
-      const isOwnClass = msg.isOwn ? "own-message" : "other-message";
-      const avatarSrc = msg.avatarUrl || PLACEHOLDER_AVATAR;
-      const authorName = msg.fullName || "Anonymous";
+    sortedMessages.forEach(msg => {
+        if (messagesContainer) {
+            const isOwnClass = msg.isOwn ? "own-message" : "other-message";
+            const avatarSrc = msg.avatarUrl || PLACEHOLDER_AVATAR;
+            const authorName = msg.fullName || "Anonymous";
 
-      messagesContainer.innerHTML += `
+            messagesContainer.innerHTML += `
         <div class="message ${isOwnClass}" style="
           display: flex;
           flex-direction: column;
           margin-bottom: 10px;
-          background-color: ${msg.isOwn ? ownerBackground : otherBackground};
+          background-color: ${
+              isUserOwner(msg.accountId, answerOwner)
+                  ? ownerBackground
+                  : otherBackground
+          };
           border-radius: 10px;
           padding: 10px;">
 
-          ${authorName !== "Anonymous" ? `
+          ${
+              authorName !== "Anonymous"
+                  ? `
             <a href="https://ask.fm/${msg.accountId}" style="display: flex; align-items: center;" target="_blank">
               <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
                 width: 30px;
@@ -120,7 +203,8 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
                 margin-right: 10px;">
               ${authorName}
             </a>
-          ` : `
+          `
+                  : `
             <div style="display: flex; align-items: center;">
               <img src="${avatarSrc}" alt="Avatar" class="avatar" style="
                 width: 30px;
@@ -129,7 +213,8 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
                 margin-right: 10px;">
               ${authorName}
             </div>
-          `}
+          `
+          }
           
           <div class="message-text" style="flex: 1;">
             ${msg.text}
@@ -139,76 +224,116 @@ const buildChatHtml = (chatDiv: HTMLDivElement, chat: ThreadDetails) => {
           </div>
         </div>
       `;
-    }
-  });
+        }
+    });
 };
 
-const showChat = (questionHTML: Element | null , chat: ThreadDetails) => {
-    
+const showChat = (
+    questionHTML: Element | null,
+    chat: ThreadDetails,
+    answerOwner: string
+) => {
     // change the +1 messages to Reload
     if (questionHTML) {
-        const readAllMessages = questionHTML?.querySelector('[data-tracking-screen="Web2app_Chat_function"]')
+        const readAllMessages = questionHTML?.querySelector(
+            '[data-tracking-screen="Web2app_Chat_function"]'
+        );
         if (readAllMessages) {
-            readAllMessages.textContent = "Reload"
+            readAllMessages.textContent = "Reload";
 
-            readAllMessages.previousElementSibling?.remove()
-            
+            readAllMessages.previousElementSibling?.remove();
+
             // append the new html
-            const chatDiv = document.createElement("div")
+            const chatDiv = document.createElement("div");
 
-            buildChatHtml(chatDiv, chat)
+            buildChatHtml(chatDiv, chat, answerOwner);
 
             // append the first chat message
-            readAllMessages.previousElementSibling?.after(chatDiv)
+            readAllMessages.previousElementSibling?.after(chatDiv);
 
             // add event listener to the send button
-            const sendMessageButton = chatDiv.querySelector('#sendMessage');
+            const sendMessageButton = chatDiv.querySelector("#sendMessage");
             if (sendMessageButton) {
-                addSendMessageClickListener(sendMessageButton as HTMLElement, chatDiv)
+                addSendMessageClickListener(
+                    sendMessageButton as HTMLElement,
+                    chatDiv
+                );
             }
         }
     }
-}
+};
 
 // Event handler for send message button click
-const handleSendMessageClick = (_: MouseEvent, chatDiv: HTMLDivElement): void => {
+const handleSendMessageClick = (
+    _: MouseEvent,
+    chatDiv: HTMLDivElement
+): void => {
     // Get the associated input element from the chatDiv
-    const inputText = chatDiv?.querySelector('input');
+    const inputText = chatDiv?.querySelector("input");
 
     if (inputText) {
-
         // get the questionId
-        const chatMessagesDiv = chatDiv.querySelector('.chat-messages');
-        const questionId = chatMessagesDiv?.getAttribute('qid');
+        const chatMessagesDiv = chatDiv.querySelector(".chat-messages");
+        const questionId = chatMessagesDiv?.getAttribute("qid");
+
+        const anonSwitch = chatDiv.querySelector(
+            "#anonToggle"
+        ) as HTMLInputElement;
 
         // add to thread
         if (questionId)
-            addToThread(questionId, inputText.value)
+            addToThread(questionId, inputText.value, anonSwitch.checked);
 
         // Clear the input text
-        inputText.value = '';
+        inputText.value = "";
     }
-
 };
 
-const addSendMessageClickListener = (sendMessageButton: HTMLElement, chatDiv: HTMLDivElement): void => {
-    if (sendMessageButton && !hasEventListener(sendMessageButton, 'click', handleSendMessageClick as EventListenerOrEventListenerObject)) {
-        sendMessageButton.addEventListener('click', event => {
-            handleSendMessageClick(event, chatDiv)
+const addSendMessageClickListener = (
+    sendMessageButton: HTMLElement,
+    chatDiv: HTMLDivElement
+): void => {
+    if (
+        sendMessageButton &&
+        !hasEventListener(
+            sendMessageButton,
+            "click",
+            handleSendMessageClick as EventListenerOrEventListenerObject
+        )
+    ) {
+        sendMessageButton.addEventListener("click", event => {
+            handleSendMessageClick(event, chatDiv);
         });
     }
 };
 
+const getAnswerOwner = (url: string): string => {
+    const regex = /ask\.fm\/([^/]+)/;
+    const matches = url?.match(regex);
+    if (matches) {
+        return matches[1];
+    }
+    return "";
+};
 
 const handleQuestionClick = async (event: Event) => {
     // get the question id from that element : under that class streamItem_meta
-    const article = (event.currentTarget as HTMLElement).closest('.item.streamItem-answer');
+    const article = (event.currentTarget as HTMLElement).closest(
+        ".item.streamItem-answer"
+    );
     if (article) {
-        const questionLink = article.querySelector('.streamItem_meta');
-        const href = questionLink!.getAttribute('href');
+        const questionLink = article.querySelector("a.streamItem_meta");
+        const href = questionLink!.getAttribute("href");
+
+        let answerOwner = "";
+        // get the user in card
+        if (href) answerOwner = getAnswerOwner(href);
+
         const questionId = extractQuestionIdFromHref(href);
-        const chat = await getThreadsDetails(questionId!)
-        showChat(article, chat)
+        if (questionId) {
+            const chat = await getThreadsDetails(questionId!);
+            showChat(article, chat, answerOwner);
+        }
     }
 };
 
@@ -221,17 +346,25 @@ const debounce = (func: () => void, delay: number) => {
     };
 };
 
-const hasEventListener = (element: EventTarget, eventType: string, callback: EventListenerOrEventListenerObject) => {
+const hasEventListener = (
+    element: EventTarget,
+    eventType: string,
+    callback: EventListenerOrEventListenerObject
+) => {
     const eventListeners = (element as any).__events || {};
-    return eventListeners[eventType]?.some((listener: EventListenerOrEventListenerObject) => listener === callback);
+    return eventListeners[eventType]?.some(
+        (listener: EventListenerOrEventListenerObject) => listener === callback
+    );
 };
 
 const handleNewContent = debounce(() => {
     // Your logic to handle new content goes here
-    const questionsThreads = document.querySelectorAll('[data-tracking-screen="Web2app_Chat_function"]');
+    const questionsThreads = document.querySelectorAll(
+        '[data-tracking-screen="Web2app_Chat_function"]'
+    );
     questionsThreads.forEach(question => {
         // Check if the event listener is already attached
-        if (!hasEventListener(question, 'click', handleQuestionClick)) {
+        if (!hasEventListener(question, "click", handleQuestionClick)) {
             question.addEventListener("click", handleQuestionClick);
         }
     });
