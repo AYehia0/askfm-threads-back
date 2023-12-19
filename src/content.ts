@@ -1,4 +1,9 @@
-import { getThreadsDetails, addToThread, ThreadDetails } from "./askfm/api.ts";
+import {
+    getThreadsDetails,
+    addToThread,
+    ThreadDetails,
+    deleteFromThread
+} from "./askfm/api.ts";
 
 const PLACEHOLDER_AVATAR =
     "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
@@ -30,7 +35,6 @@ const buildChatHtml = (
     );
 
     const isOwner = isUserOwner(answerOwner, chat.loggedInUser);
-    console.log(chat);
 
     // add the first message
     chatDiv.innerHTML = `
@@ -180,7 +184,7 @@ const buildChatHtml = (
             const authorName = msg.fullName || "Anonymous";
 
             messagesContainer.innerHTML += `
-        <div class="message ${isOwnClass}" style="
+        <div class="message ${isOwnClass}"  mid="${msg.id}" style="
           display: flex;
           flex-direction: column;
           margin-bottom: 10px;
@@ -215,13 +219,23 @@ const buildChatHtml = (
             </div>
           `
           }
-          
           <div class="message-text" style="flex: 1;">
             ${msg.text}
+            ${
+                isUserOwner(answerOwner, chat.loggedInUser) || msg.isOwn
+                    ? `
+                    <div class="delete-icon" style="display:flex; justify-content: end; cursor: pointer;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 128 128" style="fill: #f00;">
+                        <path d="M49 1C47.34 1 46 2.34 46 4C46 5.66 47.34 7 49 7L79 7C80.66 7 82 5.66 82 4C82 2.34 80.66 1 79 1L49 1z M24 15C16.83 15 11 20.83 11 28C11 35.17 16.83 41 24 41L101 41L101 104C101 113.37 93.37 121 84 121L44 121C34.63 121 27 113.37 27 104L27 52C27 50.34 25.66 49 24 49C22.34 49 21 50.34 21 52L21 104C21 116.68 31.32 127 44 127L84 127C96.68 127 107 116.68 107 104L107 40.640625C112.72 39.280625 117 34.14 117 28C117 20.83 111.17 15 104 15L24 15z M24 21L104 21C107.86 21 111 24.14 111 28C111 31.86 107.86 35 104 35L24 35C20.14 35 17 31.86 17 28C17 24.14 20.14 21 24 21z M50 55C48.34 55 47 56.34 47 58L47 104C47 105.66 48.34 107 50 107C51.66 107 53 105.66 53 104L53 58C53 56.34 51.66 55 50 55z M78 55C76.34 55 75 56.34 75 58L75 104C75 105.66 76.34 107 78 107C79.66 107 81 105.66 81 104L81 58C81 56.34 79.66 55 78 55z"></path>
+                      </svg>
+                    </div>`
+                    : ""
+            }
             <div class="small-date" style="font-size: 10px; color: #666; text-align: right;">
               ${new Date(msg.createdAt * 1000).toLocaleString()}
             </div>
           </div>
+
         </div>
       `;
         }
@@ -259,8 +273,28 @@ const showChat = (
                     chatDiv
                 );
             }
+
+            // add eventListener on the delete-icon
+            const deleteIcons = chatDiv.querySelectorAll(".delete-icon");
+            if (deleteIcons) {
+                addDeleteMessageClickListener(deleteIcons);
+            }
         }
     }
+};
+
+const addDeleteMessageClickListener = (deleteIcons: NodeListOf<Element>) => {
+    deleteIcons.forEach(el => {
+        el.addEventListener("click", _ => {
+            // get the message clicked first
+            const message = el.closest(".message");
+            const messageId = message?.getAttribute("mid");
+
+            if (messageId) {
+                deleteFromThread(messageId);
+            }
+        });
+    });
 };
 
 // Event handler for send message button click

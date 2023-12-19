@@ -1,13 +1,8 @@
 // This modules is used to alter the html by finding the questions which contains threads
 import browser from "webextension-polyfill";
 
-browser.runtime.onInstalled.addListener(details => {
-    console.log("Extension installed:", details);
-
+browser.runtime.onInstalled.addListener(_ => {
     const X_ACCESS_TOKEN = import.meta.env.VITE_X_ACCESS_TOKEN;
-
-    // maybe store the api key ? or nah
-    console.log(X_ACCESS_TOKEN);
 });
 
 browser.webRequest.onBeforeSendHeaders.addListener(
@@ -27,8 +22,6 @@ browser.webRequest.onBeforeSendHeaders.addListener(
         };
 
         if (details.url && details.url.includes("api.ask.fm/")) {
-            console.log(details.url);
-            console.log(details.requestHeaders);
             return {
                 requestHeaders: modifyHeaders(details.requestHeaders || [])
             };

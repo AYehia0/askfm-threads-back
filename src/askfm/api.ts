@@ -3,6 +3,7 @@ import axios from "axios";
 import { generateSignature } from "../askfm/generate_hash";
 
 type Message = {
+    id: number;
     fullName?: string;
     accountId?: string;
     avatarUrl?: string;
@@ -95,6 +96,7 @@ export const getThreadsDetails = async (
             createdAt: data?.root?.answer?.createdAt
         },
         messages: messages.map((message: any) => ({
+            id: message.id,
             fullName: message.fullName,
             accountId: message.uid,
             avatarUrl: message.avatarUrl,
@@ -147,5 +149,33 @@ export async function addToThread(
         data: { json: JSON.stringify(jsonData) }
     };
 
-    const d = await axios.request(config);
+    await axios.request(config);
+}
+
+// deleteFromThread
+// API: DELETE
+export async function deleteFromThread(questionId: string) {
+    const time = getUnixTime();
+    const hashMap: Map<string, string | boolean> = new Map();
+
+    hashMap.set("ts", time.toString());
+    hashMap.set("rt", "1");
+    hashMap.set("ids", questionId);
+
+    const endpoint = "/chats/messages";
+    const signature = generateSignature(endpoint, "DELETE", hashMap);
+
+    let config: AxiosRequestConfig = {
+        method: "delete",
+        url: `https://api.ask.fm/chats/messages?ids=${questionId}&rt=1&ts=${time}`,
+        headers: {
+            "X-Api-Version": "1.18",
+            "X-Client-Type": "android_4.91.1",
+            "X-Access-Token": import.meta.env.VITE_X_ACCESS_TOKEN,
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `HMAC ${signature}`
+        }
+    };
+
+    await axios.request(config);
 }

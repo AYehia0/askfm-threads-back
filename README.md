@@ -26,7 +26,11 @@ First you have to grab these keys, [How to get the keys ?](https://ayehia0.githu
 - [X] Show text based threads.
 - [X] Add `createAt` to the messages in the thread.
 - [X] Add author's name `autherName` to the messages in the thread.
-- [ ] Delete from thread.
-- [ ] Show images and youtube links.
+- [X] Delete from thread.
+- [ ] Show images and youtube links to the first message in thread.
 - [X] Add to thread: threads with replies.
 - [ ] Add to any thread: threads without replies.
+- [ ] Jump from notification to thread directly.
+- [ ] Add another color for message if the user [whoasked](https://media.tenor.com/yUw2NKPVCyEAAAAM/who-asked-me-trying-to-find-who-asked.gif) is 
+- [ ] Get questions has a limit of 25 question, so threads with more than 25 question won't be seen.
+- [ ] Add the message limit (char limit) to the messageUI and check before asking.

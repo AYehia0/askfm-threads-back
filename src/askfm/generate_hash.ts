@@ -3,7 +3,7 @@ import { HmacSHA1, enc } from "crypto-js";
 // Get the private API key using frida: check out the README.md
 const privateKey: string = import.meta.env.VITE_PRIVATE_KEY;
 
-type RequestType = "POST" | "GET";
+type RequestType = "POST" | "GET" | "DELETE";
 
 const getHostWithPort = (): string => {
     const host: string = "api.ask.fm";
