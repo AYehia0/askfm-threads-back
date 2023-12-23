@@ -1,5 +1,6 @@
+import browser from "webextension-polyfill";
 import {
-    getThreadsDetails,
+    getThreadDetails,
     addToThread,
     ThreadDetails,
     deleteFromThread
@@ -28,11 +29,6 @@ const buildChatHtml = (
 ) => {
     const ownerBackground = "#ed828259";
     const otherBackground = "#f0f0f0";
-
-    // Sort messages by createdAt
-    const sortedMessages = [...chat.messages].sort(
-        (a, b) => a.createdAt - b.createdAt
-    );
 
     const isOwner = isUserOwner(answerOwner, chat.loggedInUser);
 
@@ -177,7 +173,7 @@ const buildChatHtml = (
     `;
     }
 
-    sortedMessages.forEach(msg => {
+    chat.messages.forEach(msg => {
         if (messagesContainer) {
             const isOwnClass = msg.isOwn ? "own-message" : "other-message";
             const avatarSrc = msg.avatarUrl || PLACEHOLDER_AVATAR;
@@ -327,18 +323,9 @@ const addSendMessageClickListener = (
     sendMessageButton: HTMLElement,
     chatDiv: HTMLDivElement
 ): void => {
-    if (
-        sendMessageButton &&
-        !hasEventListener(
-            sendMessageButton,
-            "click",
-            handleSendMessageClick as EventListenerOrEventListenerObject
-        )
-    ) {
-        sendMessageButton.addEventListener("click", event => {
-            handleSendMessageClick(event, chatDiv);
-        });
-    }
+    sendMessageButton.addEventListener("click", event => {
+        handleSendMessageClick(event, chatDiv);
+    });
 };
 
 const getAnswerOwner = (url: string): string => {
@@ -350,7 +337,10 @@ const getAnswerOwner = (url: string): string => {
     return "";
 };
 
-const handleQuestionClick = async (event: Event) => {
+const handleQuestionClick = async (
+    event: Event,
+    questionsNums: string | undefined
+) => {
     // get the question id from that element : under that class streamItem_meta
     const article = (event.currentTarget as HTMLElement).closest(
         ".item.streamItem-answer"
@@ -365,67 +355,48 @@ const handleQuestionClick = async (event: Event) => {
 
         const questionId = extractQuestionIdFromHref(href);
         if (questionId) {
-            const chat = await getThreadsDetails(questionId!);
+            if (!questionsNums) {
+                questionsNums = "1";
+            }
+            const chat = await getThreadDetails(questionId!, questionsNums);
             showChat(article, chat, answerOwner);
         }
     }
 };
 
-const debounce = (func: () => void, delay: number) => {
-    let timeoutId: number;
+// Function to add event listener to questions
+function addEventListenerToQuestion(question: Element) {
+    if (!question.hasAttribute("data-listener-attached")) {
+        let questionNums = question.textContent?.match(/\d+/)?.[0];
 
-    return () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(func, delay);
-    };
-};
+        question.addEventListener("click", event =>
+            handleQuestionClick(event, questionNums)
+        );
+        // Add a flag to indicate that the listener is attached
+        question.setAttribute("data-listener-attached", "true");
+    }
+}
 
-const hasEventListener = (
-    element: EventTarget,
-    eventType: string,
-    callback: EventListenerOrEventListenerObject
-) => {
-    const eventListeners = (element as any).__events || {};
-    return eventListeners[eventType]?.some(
-        (listener: EventListenerOrEventListenerObject) => listener === callback
-    );
-};
-
-const handleNewContent = debounce(() => {
-    // Your logic to handle new content goes here
-    const questionsThreads = document.querySelectorAll(
-        '[data-tracking-screen="Web2app_Chat_function"]'
-    );
-    questionsThreads.forEach(question => {
-        // Check if the event listener is already attached
-        if (!hasEventListener(question, "click", handleQuestionClick)) {
-            question.addEventListener("click", handleQuestionClick);
+// Function to initialize event listeners
+function initializeEventListeners() {
+    let config = { childList: true, subtree: true };
+    let callback = function(mutationsList: any) {
+        for (let mutation of mutationsList) {
+            if (mutation.type == "childList") {
+                const newQuestions = document.querySelectorAll(
+                    '[data-tracking-screen="Web2app_Chat_function"]'
+                );
+                newQuestions.forEach(question => {
+                    addEventListenerToQuestion(question);
+                });
+            }
         }
-    });
-}, 500); // Adjust the delay as needed
+    };
 
-const handleUrlChange = debounce(() => {
-    // Reattach content observer after URL change
-    contentObserver.disconnect();
-    contentObserver.observe(document.body, observerConfig);
-    // Handle page change logic here (e.g., reload content)
-    handleNewContent();
-}, 500); // Adjust the delay as needed
+    let observer = new MutationObserver(callback);
+    observer.observe(document.body, config);
+}
 
-// Observer configurations
-const observerConfig = { subtree: true, childList: true };
-
-// Observer for new content
-const contentObserver = new MutationObserver(handleNewContent);
-
-// Observer for URL changes
-const urlObserver = new MutationObserver(handleUrlChange);
-
-// Function to set up observers
-const setupObservers = () => {
-    urlObserver.observe(document, observerConfig);
-    contentObserver.observe(document.body, observerConfig);
-};
-
-// Initial setup
-setupObservers();
+document.addEventListener("DOMNodeInserted", () => {
+    initializeEventListeners();
+});

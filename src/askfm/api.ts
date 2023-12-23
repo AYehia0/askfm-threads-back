@@ -1,4 +1,4 @@
-import { AxiosRequestConfig } from "axios";
+import { AxiosRequestConfig, AxiosResponse } from "axios";
 import axios from "axios";
 import { generateSignature } from "../askfm/generate_hash";
 
@@ -43,12 +43,22 @@ const getUnixTime = (): number => {
     return Math.floor(new Date().getTime() / 1000);
 };
 
-// GetThreads
-// API: GET answers/chats
-// Params: ?limit=25&qid= 174009108712 &rt=17&ts=1700937407
-export const getThreadsDetails = async (
-    questionId: string
-): Promise<ThreadDetails> => {
+const buildUrl = (hashMap: Map<string, string | number>): string => {
+    const entries = [...hashMap.entries()].sort((a, b) =>
+        a[0].localeCompare(b[0])
+    );
+    let url = "";
+    entries.forEach(entry => {
+        url += `${entry[0]}=${entry[1]}&`;
+    });
+    // remove the last &
+    return url.slice(0, -1);
+};
+
+const getThreadFromTime = async (
+    questionId: string,
+    fromTime: number
+): Promise<AxiosResponse> => {
     const hashMap: Map<string, string | number> = new Map();
     const time = getUnixTime();
 
@@ -56,6 +66,10 @@ export const getThreadsDetails = async (
     hashMap.set("qid", questionId);
     hashMap.set("ts", time);
     hashMap.set("rt", 1);
+    hashMap.set("from", fromTime);
+
+    // make the url from the hashMap but sort the keys first
+    const url = buildUrl(hashMap);
 
     const endpoint = "/answers/chats";
     const signature = generateSignature(endpoint, "GET", hashMap);
@@ -63,7 +77,7 @@ export const getThreadsDetails = async (
     let config: AxiosRequestConfig = {
         method: "get",
         maxBodyLength: Infinity,
-        url: `https://api.ask.fm/answers/chats?limit=25&rt=1&ts=${time}&qid=${questionId}`,
+        url: `https://api.ask.fm/answers/chats?${url}`,
         headers: {
             "X-Api-Version": "1.18",
             "X-Client-Type": "android_4.91.1",
@@ -71,40 +85,93 @@ export const getThreadsDetails = async (
             Authorization: `HMAC ${signature}`
         }
     };
-    const resp = await axios.request(config);
-    const data = resp.data;
+    return await axios.request(config);
+};
 
-    const messages: Message[] = data?.messages || [];
+// GetThreads
+// API: GET answers/chats
+// Params: ?limit=25&qid= 174009108712 &rt=17&ts=1700937407
+// FEAT: Get all the qustions under the thread using from=timestamp
+export const getThreadDetails = async (
+    questionId: string,
+    questionNums: string
+): Promise<ThreadDetails> => {
+    let fromTime = getUnixTime();
+    let threadDetails = {} as ThreadDetails;
 
-    const threadDetails: ThreadDetails = {
-        loggedInUser: resp.headers.login,
-        threadId: data?.root?.qid,
-        owner: {
-            owner: data?.owner?.uid,
-            avatarUrl: data?.owner?.avatarUrl,
-            fullName: data?.owner?.fullName
-        },
-        root: {
-            author: data?.root?.author,
-            authorName: data?.root?.authorName,
-            avatarThumbUrl: data?.root?.avatarThumbUrl,
-            createdAt: data?.root?.createdAt
-        },
-        answer: {
-            type: data?.root?.answer?.type,
-            body: data?.root?.answer?.body,
-            createdAt: data?.root?.answer?.createdAt
-        },
-        messages: messages.map((message: any) => ({
-            id: message.id,
-            fullName: message.fullName,
-            accountId: message.uid,
-            avatarUrl: message.avatarUrl,
-            createdAt: message.createdAt,
-            text: message.text,
-            isOwn: message.isOwn // TODO: fix this one it's always false as it ref to the owner of the question (the one who sent)
-        }))
-    };
+    // get all the questions under the thread
+    // one request can only get 25 questionsq so we need to send multiple requests based on the questionNums
+    // so if there exist 50 questions, we need to send 2 requests, any number less than 25 will only send 1 request
+
+    const nums = Math.ceil(Number(questionNums) / 25);
+    console.log(
+        "Making a requests to get all ",
+        questionNums,
+        " questions, Nums: ",
+        nums
+    );
+    for (let i = 0; i < nums; i++) {
+        console.log("Making a request to get questions from: ", fromTime);
+        let resp = await getThreadFromTime(questionId, fromTime);
+        const data = resp.data;
+        const messages: Message[] = data?.messages || [];
+
+        // check if threadDetails doesn't contain any data
+        if (Object.keys(threadDetails).length === 0) {
+            console.log("Thread Details is empty, adding data");
+            threadDetails = {
+                loggedInUser: resp.headers.login,
+                threadId: data?.root?.qid,
+                owner: {
+                    owner: data?.owner?.uid,
+                    avatarUrl: data?.owner?.avatarUrl,
+                    fullName: data?.owner?.fullName
+                },
+                root: {
+                    author: data?.root?.author,
+                    authorName: data?.root?.authorName,
+                    avatarThumbUrl: data?.root?.avatarThumbUrl,
+                    createdAt: data?.root?.createdAt
+                },
+                answer: {
+                    type: data?.root?.answer?.type,
+                    body: data?.root?.answer?.body,
+                    createdAt: data?.root?.answer?.createdAt
+                },
+                messages: messages.map((message: any) => ({
+                    id: message.id,
+                    fullName: message.fullName,
+                    accountId: message.uid,
+                    avatarUrl: message.avatarUrl,
+                    createdAt: message.createdAt,
+                    text: message.text,
+                    isOwn: message.isOwn
+                }))
+            };
+        } else {
+            console.log("Now appending messages");
+            // add the messages to the threadDetails
+            threadDetails.messages = threadDetails.messages.concat(
+                messages.map((message: any) => ({
+                    id: message.id,
+                    fullName: message.fullName,
+                    accountId: message.uid,
+                    avatarUrl: message.avatarUrl,
+                    createdAt: message.createdAt,
+                    text: message.text,
+                    isOwn: message.isOwn
+                }))
+            );
+        }
+
+        // last time of the last messages
+        fromTime =
+            threadDetails.messages[threadDetails.messages.length - 1]
+                .createdAt - 1;
+    }
+
+    // sort the messages by createdAt in threadDetails.messages
+    threadDetails.messages.sort((a, b) => a.createdAt - b.createdAt);
 
     return threadDetails;
 };
