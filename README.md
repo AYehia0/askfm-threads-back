@@ -28,7 +28,7 @@ First you have to grab these keys, [How to get the keys ?](https://ayehia0.githu
 - [X] Add author's name `autherName` to the messages in the thread.
 - [X] Delete from thread.
 - [ ] Ask as anon doesn't work if the user disabled anon questions (disable the switch by getting #single_question_anonymous[disabled])
-- [ ] Show images and youtube links to the first message in thread.
+- [X] Show images and youtube links to the first message in thread.
 - [X] Add to thread: threads with replies.
 - [ ] Add to any thread: threads without replies.
 - [ ] Jump from notification to thread directly.

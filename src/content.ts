@@ -28,16 +28,41 @@ const isUserOwner = (
 const getBackgroundColor = (
     answerOwner: string,
     loggedInUser: string,
-    isOwn: boolean
+    accountId: string | undefined
 ): string => {
     let backgroundColor = "#f0f0f0";
-    if (isUserOwner(answerOwner, loggedInUser) && isOwn)
+    if (!accountId) return backgroundColor;
+    if (
+        isUserOwner(answerOwner, loggedInUser) ||
+        isUserOwner(answerOwner, accountId)
+    )
         backgroundColor = "#ed828259";
-    else if (!isUserOwner(answerOwner, loggedInUser)) {
-        if (isOwn) backgroundColor = "#5268e159";
-    }
+    else if (isUserOwner(loggedInUser, accountId))
+        backgroundColor = "#5268e159";
 
     return backgroundColor;
+};
+
+const parseTextWithPreviews = (text: string) => {
+    text = text.replace(/\n/g, "<br>");
+
+    // Regular expression to match YouTube links
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
+    // Replace YouTube links with embedded video previews
+    return text.replace(youtubeRegex, (_, videoId) => {
+        return `
+            <div>
+                <iframe
+                    width="100%"
+                    height="315"
+                    src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=0"
+                    frameborder="0"
+                    frameborder="0"
+                    allow="accelerometer;  clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                ></iframe>
+            </div>`;
+    });
 };
 const buildChatHtml = (
     chatDiv: HTMLDivElement,
@@ -186,7 +211,18 @@ const buildChatHtml = (
         }
         
         <div class="message-text" style="flex: 1; overflow-wrap: break-word;">
-          ${chat.answer.body}
+                <br>
+                ${
+                    // Display the text part of the message
+                    // chat.answer.body.replace(/\n/g, "<br>")
+                    parseTextWithPreviews(chat.answer.body)
+                }
+                ${
+                    // Check if the answer includes a photo
+                    chat.answer.type === "photo"
+                        ? `<a href="${chat.answer.photoThumbUrl}" target="_blank"><img src="${chat.answer.photoThumbUrl}" alt="Photo" style="max-width: 100%; max-height: 300px;"></a>`
+                        : ""
+                }
           <div class="small-date" style="font-size: 10px; color: #666; text-align: right;">
             ${new Date(chat.root.createdAt * 1000).toLocaleString()}
           </div>
@@ -209,7 +245,7 @@ const buildChatHtml = (
           background-color: ${getBackgroundColor(
               answerOwner,
               chat.loggedInUser,
-              msg.isOwn
+              msg.accountId
           )};
           border-radius: 10px;
           padding: 10px;">
@@ -238,7 +274,7 @@ const buildChatHtml = (
           `
           }
           <div class="message-text" style="flex: 1; overflow-wrap: break-word;">
-            ${msg.text}
+            ${parseTextWithPreviews(msg.text)}
             ${
                 isUserOwner(answerOwner, chat.loggedInUser) || msg.isOwn
                     ? `
@@ -273,12 +309,19 @@ const showChat = (
         if (readAllMessages) {
             readAllMessages.textContent = "Reload";
 
-            readAllMessages.previousElementSibling?.remove();
+            // check if the previous element has class streamItem_visual, if yes remove it and the previous to it too
+            if (
+                readAllMessages.previousElementSibling?.classList.contains(
+                    "streamItem_visual"
+                )
+            ) {
+                readAllMessages.previousElementSibling?.remove();
+                readAllMessages.previousElementSibling?.remove();
+            } else readAllMessages.previousElementSibling?.remove();
 
             // append the new html
             const chatDiv = document.createElement("div");
 
-            console.log(chat);
             buildChatHtml(chatDiv, chat, answerOwner);
 
             // append the first chat message
@@ -335,7 +378,6 @@ const handleSendMessageClick = (
 
         // add to thread
         if (questionId) {
-            console.log(inputText.innerText);
             addToThread(questionId, inputText.value, anonSwitch.checked);
         }
 

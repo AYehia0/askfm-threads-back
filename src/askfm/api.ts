@@ -16,6 +16,7 @@ type Answer = {
     type: string;
     body: string;
     createdAt: number;
+    photoThumbUrl?: string;
 };
 
 type RootAnswer = {
@@ -127,12 +128,14 @@ export const getThreadDetails = async (
                 answer: {
                     type: data?.root?.answer?.type,
                     body: data?.root?.answer?.body,
-                    createdAt: data?.root?.answer?.createdAt
+                    createdAt: data?.root?.answer?.createdAt,
+                    photoThumbUrl: data?.root?.answer?.photoThumbUrl
                 },
                 messages: messages.map((message: any) => ({
                     id: message.id,
                     fullName: message.fullName,
-                    accountId: message.uid,
+                    // make accountId is resp.headers.login if isoown is true else message.uid
+                    accountId: message.isOwn ? resp.headers.login : message.uid,
                     avatarUrl: message.avatarUrl,
                     createdAt: message.createdAt,
                     text: message.text,
