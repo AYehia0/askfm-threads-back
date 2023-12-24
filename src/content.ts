@@ -6,6 +6,7 @@ import {
     deleteFromThread
 } from "./askfm/api.ts";
 
+const MSG_MAX_LENGTH = 300;
 const PLACEHOLDER_AVATAR =
     "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 
@@ -21,6 +22,22 @@ const isUserOwner = (
     loggedInUser: string
 ): boolean => {
     return answerOwner === loggedInUser;
+};
+
+// a function to return the background-color based on the user
+const getBackgroundColor = (
+    answerOwner: string,
+    loggedInUser: string,
+    isOwn: boolean
+): string => {
+    let backgroundColor = "#f0f0f0";
+    if (isUserOwner(answerOwner, loggedInUser) && isOwn)
+        backgroundColor = "#ed828259";
+    else if (!isUserOwner(answerOwner, loggedInUser)) {
+        if (isOwn) backgroundColor = "#5268e159";
+    }
+
+    return backgroundColor;
 };
 const buildChatHtml = (
     chatDiv: HTMLDivElement,
@@ -48,12 +65,13 @@ const buildChatHtml = (
       display: flex;
       justify-content: space-between;">
 
-      <input id="toSendText" type="text" placeholder="Type your message..." style="
+      <textarea id="toSendText" maxlength="${MSG_MAX_LENGTH}" type="text" placeholder="Type your message..." style="
         flex: 1;
         padding: 8px;
         margin-right: 10px;
+        height: 50px;
         border: 1px solid #ddd;
-        border-radius: 5px;">
+        border-radius: 5px;"></textarea>
 
       <label class="switch" style="margin-right: 10px; transform: scale(0.6);">
         <input type="checkbox" id="anonToggle" ${isOwner ? "disabled" : ""}>
@@ -65,8 +83,12 @@ const buildChatHtml = (
         background-color: #ee1144;
         color: #fff;
         border: none;
+        height: max-content;
         cursor: pointer;">Send</button>
     </div>
+
+  <!-- <!-- Add a span element for the character counter -->
+  <!-- <span id="charCounter" style="margin-left: 340px; margin-top: -30px; position: absolute; color: #333;">0/${MSG_MAX_LENGTH}</span> -->
   `;
     const style = document.createElement("style");
     style.innerHTML = `
@@ -163,7 +185,7 @@ const buildChatHtml = (
         `
         }
         
-        <div class="message-text" style="flex: 1;">
+        <div class="message-text" style="flex: 1; overflow-wrap: break-word;">
           ${chat.answer.body}
           <div class="small-date" style="font-size: 10px; color: #666; text-align: right;">
             ${new Date(chat.root.createdAt * 1000).toLocaleString()}
@@ -184,11 +206,11 @@ const buildChatHtml = (
           display: flex;
           flex-direction: column;
           margin-bottom: 10px;
-          background-color: ${
-              isUserOwner(msg.accountId, answerOwner)
-                  ? ownerBackground
-                  : otherBackground
-          };
+          background-color: ${getBackgroundColor(
+              answerOwner,
+              chat.loggedInUser,
+              msg.isOwn
+          )};
           border-radius: 10px;
           padding: 10px;">
 
@@ -215,7 +237,7 @@ const buildChatHtml = (
             </div>
           `
           }
-          <div class="message-text" style="flex: 1;">
+          <div class="message-text" style="flex: 1; overflow-wrap: break-word;">
             ${msg.text}
             ${
                 isUserOwner(answerOwner, chat.loggedInUser) || msg.isOwn
@@ -256,6 +278,7 @@ const showChat = (
             // append the new html
             const chatDiv = document.createElement("div");
 
+            console.log(chat);
             buildChatHtml(chatDiv, chat, answerOwner);
 
             // append the first chat message
@@ -299,7 +322,7 @@ const handleSendMessageClick = (
     chatDiv: HTMLDivElement
 ): void => {
     // Get the associated input element from the chatDiv
-    const inputText = chatDiv?.querySelector("input");
+    const inputText = chatDiv?.querySelector("textarea");
 
     if (inputText) {
         // get the questionId
@@ -311,8 +334,10 @@ const handleSendMessageClick = (
         ) as HTMLInputElement;
 
         // add to thread
-        if (questionId)
+        if (questionId) {
+            console.log(inputText.innerText);
             addToThread(questionId, inputText.value, anonSwitch.checked);
+        }
 
         // Clear the input text
         inputText.value = "";
