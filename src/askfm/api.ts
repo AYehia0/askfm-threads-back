@@ -104,21 +104,12 @@ export const getThreadDetails = async (
     // so if there exist 50 questions, we need to send 2 requests, any number less than 25 will only send 1 request
 
     const nums = Math.ceil(Number(questionNums) / 25);
-    console.log(
-        "Making a requests to get all ",
-        questionNums,
-        " questions, Nums: ",
-        nums
-    );
     for (let i = 0; i < nums; i++) {
-        console.log("Making a request to get questions from: ", fromTime);
         let resp = await getThreadFromTime(questionId, fromTime);
         const data = resp.data;
         const messages: Message[] = data?.messages || [];
 
-        // check if threadDetails doesn't contain any data
         if (Object.keys(threadDetails).length === 0) {
-            console.log("Thread Details is empty, adding data");
             threadDetails = {
                 loggedInUser: resp.headers.login,
                 threadId: data?.root?.qid,
@@ -149,8 +140,6 @@ export const getThreadDetails = async (
                 }))
             };
         } else {
-            console.log("Now appending messages");
-            // add the messages to the threadDetails
             threadDetails.messages = threadDetails.messages.concat(
                 messages.map((message: any) => ({
                     id: message.id,
