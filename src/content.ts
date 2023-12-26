@@ -2,9 +2,10 @@ import browser from "webextension-polyfill";
 import {
     getThreadDetails,
     addToThread,
-    ThreadDetails,
     deleteFromThread
 } from "./askfm/api.ts";
+
+import { ThreadDetails } from "./askfm/api.types";
 
 const MSG_MAX_LENGTH = 300;
 const PLACEHOLDER_AVATAR =
