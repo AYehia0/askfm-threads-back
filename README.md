@@ -2,13 +2,15 @@
 
 A chrome extension which brings threads back to the askfm web version.
 
+> ⚠️ **ARCHIVED: This project is no longer maintained.**  
+> ❌ **ASKfm officially shut down on December 1, 2024**, as announced by its administrators.  
+> 🗃️ This repository is being archived for educational and historical reference.
+
 <p align="center">
     <img src=".assets/ext.png" width="70%" >
 </p>
 
 ## Getting started
-
-> :warning: **Disclaimer; This project is for educational purposes only**: Be very careful here!
 
 First you have to grab these keys, [How to get the keys ?](https://ayehia0.github.io/posts/askfm_reverse_engineering/):
 - `PRIVATE_KEY`
